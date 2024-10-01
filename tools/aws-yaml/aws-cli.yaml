@@ -1,5 +1,5 @@
 tools:
-  - name: aws_cli
+  - name: aws-cli
     image: amazon/aws-cli
     description: "Runs AWS CLI commands - recieves the command to run as an argument"
     alias: aws
