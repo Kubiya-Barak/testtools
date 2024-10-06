@@ -1,9 +1,9 @@
-import inspect
+from kubiya_sdk.tools.models import Tool, Arg, FileSpec
+import json
 
-from kubiya_sdk import tool_registry
-from kubiya_sdk.tools.models import Arg, Tool, FileSpec
-
-script_content = f"""
+class PagerDuty(Tool):
+    def __init__(self, long_running=False, mermaid_diagram=None):
+        script_content = f"""
 #!/usr/bin/env python3
 
 import os
@@ -76,36 +76,31 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args.description)
 """
-
-page_oncall_engineer_tool = Tool(
-    name="page-oncall-engineer-python",
-    description="This will create a PagerDuty incident and notify the on-call engineer",  # Description is important for the teammate to understand what the tool does
-    type="docker",
-    image="python:3.11-bullseye",
-    dependencies = ["argparse"],
-    args=[
-        Arg(
-            name="description",
-            required=True,
-            description="The description of the incident for the on-call engineer",
-        ),
-    ],
-    secrets=["PD_API_KEY"],
-    env=[
-        "PD_SERVICE_ID",
-        "PD_ESCALATION_POLICY_ID",
-        "KUBIYA_USER_EMAIL",
-    ],
-    content="""
-pip install requests==2.32.3 > /dev/null 2>&1
-python /tmp/script.py --description "{{ .description }}"
-""",
-    with_files=[
-        FileSpec(
-            destination="/tmp/main.py",
-            content=script_content,
-        ),
-    ],
-)
-
-tool_registry.register("aedm", page_oncall_engineer_tool)
+        super().__init__(
+            name="page-oncall-engineer-python",
+            description="This will create a PagerDuty incident and notify the on-call engineer",  # Description is important for the teammate to understand what the tool doesdescription=description,
+            type="docker",
+            image="python:3.11",
+            content="python /tmp/script.py --description '{{ .description }}'",    
+            args=[
+                Arg(
+                    name="description",
+                    required=True,
+                    description="The description of the incident for the on-call engineer",
+                ),
+            ],
+            secrets=["PD_API_KEY"],
+            long_running=long_running,
+            mermaid=mermaid_diagram,
+            env=[
+                "PD_SERVICE_ID",
+                "PD_ESCALATION_POLICY_ID",
+                "KUBIYA_USER_EMAIL",
+            ],
+            with_files=[
+                FileSpec(
+                    destination="/tmp/script.py",
+                    content=script_content,
+                )
+            ],
+        )
