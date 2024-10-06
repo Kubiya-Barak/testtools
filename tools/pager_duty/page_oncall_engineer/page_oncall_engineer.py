@@ -1,5 +1,5 @@
 from kubiya_sdk.tools import Arg
-from .base import SlackTool
+from .base import PagerDuty
 from kubiya_sdk.tools.registry import tool_registry
 
 # Slack Send Message Tool
