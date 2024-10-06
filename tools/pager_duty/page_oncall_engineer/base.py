@@ -4,8 +4,6 @@ import json
 class PagerDuty(Tool):
     def __init__(self, long_running=False, mermaid_diagram=None):
         script_content = f"""
-#!/usr/bin/env python3
-
 import os
 import argparse
 
