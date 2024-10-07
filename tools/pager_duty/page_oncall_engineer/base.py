@@ -61,6 +61,7 @@ def main(description):
     )
 
 if __name__ == '__main__':
+    os.environ.get(\"name\", \"User\")}
     parser = argparse.ArgumentParser(
         description='Page the on-call engineer via PagerDuty.'
     )
