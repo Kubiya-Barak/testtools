@@ -99,3 +99,6 @@ if __name__ == '__main__':
                 )
             ],
         )
+
+        PD_SERVICE_ID = PRD0OG4
+        PD_ESCALATION_POLICY_ID = PXKW5ME

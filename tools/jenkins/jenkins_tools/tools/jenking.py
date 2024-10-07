@@ -1,5 +1,5 @@
 from kubiya_sdk.tools import Arg
-from .base import JenkinsTool
+from base import JenkinsTool
 from kubiya_sdk.tools.registry import tool_registry
 
 hello_world = JenkinsTool(

@@ -3,6 +3,7 @@ import inspect
 from kubiya_sdk import tool_registry
 from kubiya_sdk.tools.models import Arg, Tool, FileSpec
 
+from page_oncall_engineer import *
 
 page_oncall_engineer_tool = Tool(
     name="page-oncall-engineer-python",
