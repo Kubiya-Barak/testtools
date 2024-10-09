@@ -11,7 +11,12 @@ class JenkinsTool(Tool):
             icon_url=JENKINS_ICON_URL,
             type="docker",
             image="python:3.11",
-            content="python /tmp/script.py",
+                content="""
+pip install requests==2.32.3 > /dev/null 2>&1
+pip install argprase > /dev/null 2>&1
+
+python /tmp/script.py
+""",
             args=args,
             secrets=env,
             long_running=long_running,
