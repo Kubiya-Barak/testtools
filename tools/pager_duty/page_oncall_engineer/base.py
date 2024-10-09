@@ -21,33 +21,33 @@ def create_pd_incident(description: str):
     KUBIYA_USER_EMAIL = _get_or_raise_env_var('KUBIYA_USER_EMAIL')
 
     url = 'https://api.pagerduty.com/incidents'
-    headers = {{
+    headers = {
         'Authorization': 'Token token={{0}}'.format(PD_API_KEY),
         'Content-Type': 'application/json',
         'From': KUBIYA_USER_EMAIL,
-    }}
-    payload = {{
-        'incident': {{
+    }
+    payload = {
+        'incident': {
             'type': 'incident',
             'title': 'Assistance requested via Kubi - {{0}}'.format(description),
-            'service': {{'id': SERVICE_ID, 'type': 'service_reference'}},
-            'escalation_policy': {{
+            'service': {'id': SERVICE_ID, 'type': 'service_reference'},
+            'escalation_policy': {
                 'id': ESCALATION_POLICY_ID,
                 'type': 'escalation_policy_reference',
-            }},
-            'body': {{'type': 'incident_body', 'details': description}},
-        }}
-    }}
+            },
+            'body': {'type': 'incident_body', 'details': description},
+        }
+    }
     response = requests.post(url, headers=headers, json=payload)
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        raise Exception(f'Failed to create incident: {{e}}')
+        raise Exception(f'Failed to create incident: {e}')
 
     try:
         return response.json()['incident']['id']
     except Exception as e:
-        raise Exception(f'Failed to fetch incident id: {{e}}')
+        raise Exception(f'Failed to fetch incident id: {e}')
 
 def main(description):
     if not description:
@@ -61,7 +61,6 @@ def main(description):
     )
 
 if __name__ == '__main__':
-    os.environ.get(\"name\", \"User\")}
     parser = argparse.ArgumentParser(
         description='Page the on-call engineer via PagerDuty.'
     )
@@ -75,8 +74,12 @@ if __name__ == '__main__':
             name='page-oncall-engineer-python',
             description='This will create a PagerDuty incident and notify the on-call engineer',
             type='docker',
-            image='python:3.11',
-            content='python /tmp/script.py --description "{{ .description }}"',
+            image="python:3.11-bullseye",
+              content="""
+pip install requests==2.32.3 > /dev/null 2>&1
+
+python /tmp/script.py --description "{{ .description }}"
+""",
             args=[
                 Arg(
                     name='description',
@@ -99,6 +102,3 @@ if __name__ == '__main__':
                 )
             ],
         )
-
-        PD_SERVICE_ID = PRD0OG4
-        PD_ESCALATION_POLICY_ID = PXKW5ME

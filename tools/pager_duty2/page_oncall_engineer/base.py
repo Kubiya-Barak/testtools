@@ -3,7 +3,7 @@ import inspect
 from kubiya_sdk import tool_registry
 from kubiya_sdk.tools.models import Arg, Tool, FileSpec
 
-from page_oncall_engineer import *
+from . import page_oncall_engineer
 
 page_oncall_engineer_tool = Tool(
     name="page-oncall-engineer-python",
@@ -25,6 +25,7 @@ page_oncall_engineer_tool = Tool(
     ],
     content="""
 pip install requests==2.32.3 > /dev/null 2>&1
+pip install argprase > /dev/null 2>&1
 
 python /tmp/main.py --description "{{ .description }}"
 """,
