@@ -2,7 +2,7 @@ import inspect
 
 from kubiya_sdk import tool_registry
 from kubiya_sdk.tools.models import Arg, Tool, FileSpec
-
+from fake_tool import *
 fake_tool = Tool(
     name="fake-tool",
     description="This is a fake tool",
