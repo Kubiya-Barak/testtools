@@ -3,8 +3,6 @@ import inspect
 from kubiya_sdk import tool_registry
 from kubiya_sdk.tools.models import Arg, Tool, FileSpec
 
-from . import fake_tool, webhook_incident_response, page_oncall_engineer, trigger_major_incident
-
 fake_tool = Tool(
     name="fake-tool",
     description="This is a fake tool",
