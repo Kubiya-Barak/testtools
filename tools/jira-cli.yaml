@@ -25,8 +25,5 @@ tools:
       - name: command
         description: "The JIRA CLI command to run. Do not add `jira` at the front."
         required: true
-      - name: workspace_name
-        description: "The Jira workspace name to work against"
-        required: false
     secrets:
       - "JIRA_OAUTH_TOKEN"
