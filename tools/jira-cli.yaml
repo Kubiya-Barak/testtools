@@ -16,10 +16,6 @@ tools:
       ALL commands require -p (project key). Ensure the project key is provided.
     alias: jira
     content: |
-      workspace="{{ .workspace_name }}"
-      if [ -n "$workspace" ]; then
-        export JIRA_WORKSPACE_NAME="${workspace}"
-      fi
       jira {{.command}}
     args:
       - name: command
