@@ -1,9 +1,3 @@
-variable "kubiya_api_key" {
-  description = "Kubiya API key for authentication (set via TF_VAR_kubiya_api_key environment variable)"
-  type        = string
-  sensitive   = true
-}
-
 variable "org_name" {
   description = "The name of the organization to onboard"
   type        = string
