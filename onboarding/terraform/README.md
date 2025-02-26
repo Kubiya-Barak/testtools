@@ -1,207 +1,144 @@
-# 🤖 Jenkins Conversational Proxy
+# Kubiya Organization Onboarding Terraform Module
 
-Transform your Jenkins CI/CD operations with an AI-powered conversational interface. Execute, monitor, and manage Jenkins jobs through natural language interactions while maintaining security and control.
+This Terraform module automates the process of onboarding a new organization to Kubiya and configuring various integration sources.
 
-## 🌟 Features
+## Features
 
-- 🎯 **Natural Language Control**: Execute Jenkins jobs using conversational commands
-- 📊 **Real-time Monitoring**: Stream job logs and status updates
-- 🔄 **Smart Job Sync**: Automatically sync and discover available Jenkins jobs
-- 🔐 **Secure Authentication**: Token-based authentication with secret management
-- 📝 **Live Logging**: Real-time log streaming and monitoring
-- ⏱️ **Execution Control**: Handle long-running jobs with configurable timeouts
-- 🎛️ **Flexible Configuration**: Support for job inclusion/exclusion patterns
-- 👥 **Access Control**: Role-based access through Kubiya groups
+- Organization creation with admin user
+- Support for inviting additional users and admins
+- Automated source integration setup for:
+  - Kubernetes
+  - GitHub
+  - Jenkins
+  - Jira
+  - Slack
 
-## 🏗 Architecture
+## Prerequisites
 
-```mermaid
-graph TB
-    U[User] --> |Natural Language| K[Kubiya Platform]
-    K --> |API Calls| J[Jenkins Server]
-    K --> |Secret Management| S[Kubiya Secrets]
-    J --> |Job Status| K
-    J --> |Build Logs| K
-    K --> |Real-time Updates| U
+- Terraform >= 1.0
+- Kubiya API key
+- `curl` and `jq` installed on the system running Terraform
 
-    style U fill:#4aa1ff,stroke:#333,stroke-width:2px
-    style K fill:#3ebd64,stroke:#333,stroke-width:2px
-    style J fill:#335061,stroke:#333,stroke-width:2px
-    style S fill:#ff9800,stroke:#333,stroke-width:2px
-```
+## Usage
 
-## 📋 Requirements
+1. Clone this repository
+2. Copy `terraform.tfvars.example` to `terraform.tfvars`
+3. Set your Kubiya API key as an environment variable:
+   ```bash
+   export TF_VAR_kubiya_api_key="your-api-key"
+   ```
 
-- Jenkins server with API access enabled
-- Jenkins API token with appropriate permissions
-- Kubiya platform access
-- `KUBIYA_API_KEY` environment variable set
+4. Configure your `terraform.tfvars`:
+   ```hcl
+   # Organization details
+   org_name = "your-org-name"
+   admin_email = "admin@your-organization.com"
 
-## 🚀 Quick Start
+   # Optional: Invite additional users
+   invite_users = [
+     "user1@example.com",
+     "user2@example.com"
+   ]
 
-1. **Configure Variables**:
+   # Optional: Invite additional admins
+   invite_admins = [
+     "admin1@example.com",
+     "admin2@example.com"
+   ]
+
+   # Enable desired sources
+   enable_k8s_source = true
+   enable_github_source = true
+   enable_jenkins_source = true
+   enable_jira_source = true
+   enable_slack_source = true
+   ```
+
+5. Initialize and apply the Terraform configuration:
+   ```bash
+   terraform init
+   terraform apply
+   ```
+
+## Variables
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|----------|
+| kubiya_api_key | Kubiya API key for authentication | string | - | yes |
+| org_name | Name of the organization to create | string | - | yes |
+| admin_email | Email of the organization admin | string | - | yes |
+| invite_users | List of user emails to invite | list(string) | [] | no |
+| invite_admins | List of admin emails to invite | list(string) | [] | no |
+| enable_k8s_source | Enable Kubernetes source | bool | false | no |
+| enable_github_source | Enable GitHub source | bool | false | no |
+| enable_jenkins_source | Enable Jenkins source | bool | false | no |
+| enable_jira_source | Enable Jira source | bool | false | no |
+| enable_slack_source | Enable Slack source | bool | false | no |
+
+## Outputs
+
+The module outputs a sensitive result object containing:
+- Organization onboarding status message
+- API token (sensitive)
+- List of enabled sources
+
+## Source Integration Details
+
+### Kubernetes
+- Source: [kubiyabot/community-tools/kubernetes](https://github.com/kubiyabot/community-tools/tree/main/kubernetes)
+- Provides Kubernetes cluster management capabilities
+
+### GitHub
+- Source: [kubiyabot/community-tools/github](https://github.com/kubiyabot/community-tools/tree/main/github)
+- Enables GitHub repository and workflow management
+
+### Jenkins
+- Source: [kubiyabot/community-tools/jenkins](https://github.com/kubiyabot/community-tools/tree/main/jenkins)
+- Provides Jenkins job management and automation
+
+### Jira
+- Source: [kubiyabot/community-tools/jira](https://github.com/kubiyabot/community-tools/tree/main/jira)
+- Enables Jira issue and project management
+
+### Slack
+- Source: [kubiyabot/community-tools/slack](https://github.com/kubiyabot/community-tools/tree/main/slack)
+- Provides Slack integration and notifications
+
+## Error Handling
+
+The module includes error checking and validation:
+- Validates API responses
+- Ensures token extraction success
+- Verifies source integration status
+
+## Security Considerations
+
+- API keys and tokens are marked as sensitive
+- Credentials are not logged or exposed in outputs
+- Token file is managed securely by Terraform
+
+## Terraform Cloud Integration
+
+This module is configured to work with Terraform Cloud:
 ```hcl
-module "jenkins_proxy" {
-  source = "github.com/kubiyabot/terraform-modules//terraform_modules_jenkins_jobs"
-
-  # Jenkins Configuration
-  jenkins_url      = "https://jenkins.example.com"
-  jenkins_username = "admin"
-  jenkins_token    = var.jenkins_token  # Pass securely
-
-  # Job Management
-  sync_all_jobs = true
-  exclude_jobs  = ["internal-", "test-"]
-  
-  # Execution Settings
-  stream_logs = true
-  poll_interval = 30
-  long_running_threshold = 300
-
-  # Access Control
-  name = "jenkins-proxy"
-  integrations = ["slack"]
-  allowed_groups = ["DevOps"]
+terraform {
+  cloud {
+    organization = "Kubiya"
+    workspaces {
+      name = "Onboarding"
+    }
+  }
 }
 ```
 
-2. **Set Environment Variables**:
-```bash
-export KUBIYA_API_KEY="your-api-key"
-```
+## Contributing
 
-3. **Deploy**:
-```bash
-terraform init
-terraform apply
-```
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-## 💬 Example Interactions
+## License
 
-```
-User: "Run the deploy-production job"
-Assistant: "I'll help you execute the deploy-production job. Current status: READY"
-
-User: "Show me the logs"
-Assistant: "Streaming logs for deploy-production:
-Building in workspace /var/jenkins_home/workspace/deploy-production
-[Pipeline] Start
-..."
-
-User: "List all available jobs"
-Assistant: "Here are the available Jenkins jobs:
-1. deploy-production
-2. run-tests
-3. build-frontend
-..."
-```
-
-## 📝 Configuration Reference
-
-### Required Variables
-
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
-| `jenkins_url` | Jenkins server URL | `string` | - |
-| `jenkins_token` | Jenkins API token | `string` | - |
-
-### Optional Variables
-
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
-| `jenkins_username` | Jenkins admin username | `string` | `"admin"` |
-| `sync_all_jobs` | Sync all available jobs | `bool` | `true` |
-| `include_jobs` | Jobs to include | `list(string)` | `[]` |
-| `exclude_jobs` | Jobs to exclude | `list(string)` | `[]` |
-| `stream_logs` | Enable log streaming | `bool` | `true` |
-| `poll_interval` | Status check interval | `number` | `30` |
-| `long_running_threshold` | Long job threshold | `number` | `300` |
-| `name` | Assistant name | `string` | `"jenkins-proxy"` |
-| `runner` | Infrastructure runner | `string` | `"kubiya-hosted"` |
-| `integrations` | Available integrations | `list(string)` | `["slack"]` |
-| `allowed_groups` | Allowed groups | `list(string)` | `["Admin"]` |
-
-## 🔒 Security Features
-
-1. **Token Management**:
-   - Secure storage in Kubiya's secret management
-   - Automatic token rotation support
-   - Access control through Kubiya groups
-
-2. **Access Controls**:
-   - Role-based access control
-   - Integration-specific permissions
-   - Audit logging of all operations
-
-3. **Job Security**:
-   - Pattern-based job filtering
-   - Execution timeouts
-   - Controlled log access
-
-## 🔍 Troubleshooting
-
-Common issues and solutions:
-
-1. **Connection Issues**:
-   ```
-   Error: Failed to connect to Jenkins server
-   Solution: Verify Jenkins URL and token permissions
-   ```
-
-2. **Authentication Errors**:
-   ```
-   Error: Invalid credentials
-   Solution: Check Jenkins token and username configuration
-   ```
-
-3. **Job Access Issues**:
-   ```
-   Error: Job not found
-   Solution: Verify job name and inclusion/exclusion patterns
-   ```
-
-## 📚 Additional Resources
-
-- [Jenkins API Documentation](https://www.jenkins.io/doc/book/using/remote-access-api/)
-- [Kubiya Documentation](https://docs.kubiya.ai)
-- [Security Best Practices](https://docs.kubiya.ai/security)
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
-
-## 📄 License
-
-This module is released under the MIT License.
-
-```
-MIT License
-
-Copyright (c) 2024 Kubiya.ai
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
-
-Need help? Join our [Community Slack](https://slack.kubiya.ai) or [contact support](mailto:support@kubiya.ai).
-
----
-
-_Built with ❤️ by [Kubiya.ai](https://kubiya.ai)_
+This project is licensed under the MIT License - see the LICENSE file for details.
