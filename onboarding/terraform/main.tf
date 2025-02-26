@@ -11,13 +11,6 @@ terraform {
   }
 }
 
-variable "KUBIYA_API_KEY" {
-  description = "Kubiya API key for authentication (set via TF_VAR_kubiya_api_key environment variable)"
-  type        = string
-  sensitive   = true
-  default = "Will come from env variable"
-}
-
 
 locals {
   base_url = "https://api.kubiya.ai/api"
@@ -44,7 +37,7 @@ resource "null_resource" "onboard_organization" {
     command = <<-EOT
       # Make the initial request and store the full response
       RESPONSE=$(curl -s -X POST '${local.api_endpoint}' \
-      -H 'Authorization: UserKey ${var.KUBIYA_API_KEY}' \
+      -H 'Authorization: UserKey ${env.KUBIYA_API_KEY}' \
       -H 'Content-Type: application/json' \
       -d '${jsonencode({
         org_name     = var.org_name
