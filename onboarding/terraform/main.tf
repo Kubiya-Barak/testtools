@@ -15,6 +15,7 @@ variable "KUBIYA_API_KEY" {
   description = "Kubiya API key for authentication (set via TF_VAR_kubiya_api_key environment variable)"
   type        = string
   sensitive   = true
+  default = "Will come from env variable"
 }
 
 
