@@ -84,8 +84,6 @@ module "kubiya_resources" {
   source = "./modules/kubiya_resources"
   
   depends_on = [data.local_file.token]
-
-  kubiya_runner = "default"
   
   enable_k8s_source     = var.enable_k8s_source
   enable_github_source  = var.enable_github_source

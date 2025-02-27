@@ -1,3 +1,9 @@
 onboarding/.DS_Store
 .DS_Store
 .DS_Store
+onboarding/terraform/modules/kubiya_resources/terraform.tfstate
+onboarding/terraform/modules/kubiya_resources/terraform.tfstate.backup
+onboarding/terraform/modules/kubiya_resources/.terraform/providers/registry.terraform.io/kubiya-terraform/kubiya/0.8.0/darwin_arm64/terraform-provider-kubiya_v0.8.0
+onboarding/terraform/modules/kubiya_resources/.terraform/providers/registry.terraform.io/hashicorp/http/3.4.5/darwin_arm64/terraform-provider-http_v3.4.5_x5
+onboarding/terraform/modules/kubiya_resources/.terraform/providers/registry.terraform.io/hashicorp/http/3.4.5/darwin_arm64/LICENSE.txt
+onboarding/terraform/modules/kubiya_resources/.terraform.lock.hcl

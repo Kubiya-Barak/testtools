@@ -1,8 +1,3 @@
-variable "kubiya_runner" {
-  description = "The Kubiya runner to use for the sources"
-  type        = string
-}
-
 variable "enable_k8s_source" {
   description = "Whether to enable the Kubernetes source"
   type        = bool
