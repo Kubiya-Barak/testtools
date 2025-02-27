@@ -40,7 +40,7 @@ resource "null_resource" "onboard_organization" {
     command = <<-EOT
       # Make the initial request and store the full response
       RESPONSE=$(curl -s -X POST '${local.api_endpoint}' \
-      -H 'Authorization: UserKey ${env.KUBIYA_API_KEY}' \
+      -H "Authorization: UserKey $KUBIYA_API_KEY" \
       -H 'Content-Type: application/json' \
       -d '${jsonencode({
         org_name     = var.org_name
