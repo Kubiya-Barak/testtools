@@ -66,12 +66,11 @@ resource "null_resource" "onboard_organization" {
         exit 1
       fi
 
+      # Save token to file and export it for Kubiya provider
       echo "$TOKEN" > ${local_file.token_file.filename}
+      export KUBIYA_API_TOKEN="$TOKEN"
     EOT
     interpreter = ["/bin/sh", "-c"]
-    environment = {
-      KUBIYA_API_KEY = "$$KUBIYA_API_KEY"
-    }
   }
 }
 
@@ -80,6 +79,9 @@ data "local_file" "token" {
   depends_on = [null_resource.onboard_organization]
   filename = local_file.token_file.filename
 }
+
+# Configure the Kubiya provider with the token from onboarding
+provider "kubiya" {}
 
 # Use the Kubiya resources module
 module "kubiya_resources" {
@@ -100,11 +102,6 @@ module "kubiya_resources" {
   providers = {
     kubiya = kubiya
   }
-}
-
-# Configure the Kubiya provider with the token
-provider "kubiya" {
-  # The token will be automatically used from KUBIYA_API_TOKEN environment variable
 }
 
 # Output message
@@ -188,9 +185,7 @@ variable "enable_slack_source" {
   }
 }
 
-provider "kubiya" {
-  # API key will be set via KUBIYA_API_TOKEN environment variable
-}
+provider "kubiya" {}
 
 # Knowledge base data sources
 data "http" "kubernetes_security" {
@@ -283,51 +278,6 @@ output "source_ids" {
     slack = var.enable_slack_source ? kubiya_source.slack[0].id : null
     diagramming = kubiya_source.diagramming.id
   }
-}''',
-                "variables.tf": '''variable "kubiya_runner" {
-  description = "The Kubiya runner to use for the sources"
-  type        = string
-}
-
-variable "agent_name" {
-  description = "The name of the agent to associate with knowledge resources"
-  type        = string
-}
-
-variable "kubiya_groups" {
-  description = "List of Kubiya groups to associate with knowledge resources"
-  type        = list(string)
-  default     = []
-}
-
-variable "enable_k8s_source" {
-  description = "Whether to enable the Kubernetes source"
-  type        = bool
-  default     = true
-}
-
-variable "enable_github_source" {
-  description = "Whether to enable the GitHub source"
-  type        = bool
-  default     = true
-}
-
-variable "enable_jenkins_source" {
-  description = "Whether to enable the Jenkins source"
-  type        = bool
-  default     = true
-}
-
-variable "enable_jira_source" {
-  description = "Whether to enable the Jira source"
-  type        = bool
-  default     = true
-}
-
-variable "enable_slack_source" {
-  description = "Whether to enable the Slack source"
-  type        = bool
-  default     = true
 }'''
             }
         }
