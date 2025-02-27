@@ -93,18 +93,21 @@ enable_slack_source = true
 EOL
 fi
 
-# Create directories for modules
-mkdir -p /terraform/modules/kubiya_resources
+# Step 1: Run onboarding to get token
+terraform init
+terraform apply -auto-approve
 
-{content}
-
-# Process the output through our Python handler and ensure token is exported
+# Step 2: If we got a token, run the resources configuration
 if [ -f /terraform/token.txt ]; then
     export KUBIYA_API_TOKEN=$(cat /terraform/token.txt)
     echo "Exported KUBIYA_API_TOKEN from token file"
     
-    # Re-run terraform apply with the new token
-    terraform apply -auto-approve
+    # Create a separate terraform configuration for resources
+    mv /terraform/modules/kubiya_resources/main.tf /terraform/resources.tf
+    
+    # Initialize and apply the resources with new token
+    terraform init
+    terraform apply -auto-approve -target=kubiya_runner.runner-dev-cluster -target=kubiya_agent.kubernetes_crew
 fi
 
 python3 /opt/scripts/terraform_handler.py
