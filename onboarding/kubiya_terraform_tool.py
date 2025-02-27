@@ -126,11 +126,11 @@ python3 /opt/scripts/terraform_handler.py
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=terraform_files["modules"]["kubiya_resources"]["main.tf"]
+                    content=terraform_files["modules"]["kubiya_resources"]["main"]["content"]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=terraform_files["modules"]["kubiya_resources"]["variables.tf"]
+                    content=terraform_files["modules"]["kubiya_resources"]["variables"]["content"]
                 ),
                 # Include the Python handler script
                 FileSpec(

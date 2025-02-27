@@ -3,17 +3,6 @@ variable "kubiya_runner" {
   type        = string
 }
 
-variable "agent_name" {
-  description = "The name of the agent to associate with knowledge resources"
-  type        = string
-}
-
-variable "kubiya_groups" {
-  description = "List of Kubiya groups to associate with knowledge resources"
-  type        = list(string)
-  default     = []
-}
-
 variable "enable_k8s_source" {
   description = "Whether to enable the Kubernetes source"
   type        = bool

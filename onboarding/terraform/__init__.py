@@ -174,7 +174,9 @@ variable "enable_slack_source" {
         },
         "modules": {
             "kubiya_resources": {
-                "main.tf": '''terraform {
+                "main": {
+                    "path": "main.tf",
+                    "content": '''terraform {
   required_providers {
     http = {
       source = "hashicorp/http"
@@ -279,9 +281,11 @@ output "source_ids" {
     slack = var.enable_slack_source ? kubiya_source.slack[0].id : null
     diagramming = kubiya_source.diagramming.id
   }
-}
-
-variable "kubiya_runner" {
+}'''
+                },
+                "variables": {
+                    "path": "variables.tf",
+                    "content": '''variable "kubiya_runner" {
   description = "The Kubiya runner to use for the sources"
   type        = string
 }
@@ -325,8 +329,8 @@ variable "enable_slack_source" {
   description = "Whether to enable the Slack source"
   type        = bool
   default     = true
-}
-'''
+}'''
+                }
             }
         }
     }
