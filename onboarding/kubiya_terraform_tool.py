@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 import subprocess
 import json
-from typing import List, Optional
+from typing import List
 from kubiya_sdk.tools import Tool, Arg, FileSpec, Volume
 from kubiya_sdk.tools.registry import tool_registry
 
@@ -13,7 +13,7 @@ project_root = str(Path(__file__).resolve().parents[2])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from terraform import main, variables, modules
+from terraform import get_terraform_content
 
 TERRAFORM_ICON_URL = "https://storage.getlatka.com/images/kubiya.ai.png"
 
@@ -57,7 +57,10 @@ def terraform_handler():
         }))
 
 class TerraformTool(Tool):
-    def __init__(self, name, description, content, args, terraform_dir="/terraform"):
+    def __init__(self, name, description, content, args):
+        # Get Terraform content
+        terraform_files = get_terraform_content()
+        
         # Setup Terraform environment and token handling
         setup_script = f"""
 set -eu
@@ -65,7 +68,7 @@ set -eu
 # Install required packages
 apk add --no-cache python3 curl jq
 
-cd {terraform_dir}
+cd /terraform
 
 # Ensure KUBIYA_API_KEY is available
 if [ -z "$KUBIYA_API_KEY" ]; then
@@ -107,19 +110,19 @@ python3 /opt/scripts/terraform_handler.py
                 # Include all Terraform files with their content
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=inspect.getsource(main)
+                    content=terraform_files["main"]["content"]
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
-                    content=inspect.getsource(variables)
+                    content=terraform_files["variables"]["content"]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=inspect.getsource(modules.kubiya_resources.main)
+                    content=terraform_files["modules"]["kubiya_resources"]["main.tf"]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=inspect.getsource(modules.kubiya_resources.variables)
+                    content=terraform_files["modules"]["kubiya_resources"]["variables.tf"]
                 ),
                 # Include the Python handler script
                 FileSpec(
