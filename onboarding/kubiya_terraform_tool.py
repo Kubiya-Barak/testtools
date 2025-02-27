@@ -15,6 +15,272 @@ if project_root not in sys.path:
 
 TERRAFORM_ICON_URL = "https://storage.getlatka.com/images/kubiya.ai.png"
 
+def main_tf():
+    """Main Terraform configuration"""
+    return '''
+terraform {
+  required_providers {
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.4"
+    }
+    kubiya = {
+      source = "kubiya-terraform/kubiya"
+    }
+  }
+}
+
+locals {
+  base_url = "https://api.kubiya.ai/api"
+  api_endpoint = "${local.base_url}/v1/onboard"
+}
+
+# Create a file to track if token was created
+resource "local_file" "token_file" {
+  content  = "placeholder"
+  filename = "${path.module}/token.txt"
+  lifecycle {
+    ignore_changes = [content]
+  }
+}
+
+# HTTP POST request for organization onboarding
+resource "null_resource" "onboard_organization" {
+  triggers = {
+    org_name = var.org_name
+    admin_email = var.admin_email
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Make the initial request and store the full response
+      RESPONSE=$(curl -s -X POST '${local.api_endpoint}' \
+      -H "Authorization: UserKey $KUBIYA_API_KEY" \
+      -H 'Content-Type: application/json' \
+      -d '${jsonencode({
+        org_name     = var.org_name
+        admin_email  = var.admin_email
+        invites     = length(var.invite_users) > 0 || length(var.invite_admins) > 0 ? {
+          users  = var.invite_users
+          admins = var.invite_admins
+        } : null
+        set_api_key = true
+      })}')
+
+      echo "Response from onboarding: $RESPONSE"
+
+      TOKEN=$(echo "$RESPONSE" | jq -r '.token')
+      if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+        echo "Error: Failed to extract token from response"
+        echo "Response was: $RESPONSE"
+        exit 1
+      fi
+
+      # Save token to file and export it for Kubiya provider
+      echo "$TOKEN" > ${local_file.token_file.filename}
+      export KUBIYA_API_TOKEN="$TOKEN"
+      echo "Successfully obtained and exported new API token"
+    EOT
+    interpreter = ["/bin/sh", "-c"]
+  }
+}
+
+# Read the token from the file
+data "local_file" "token" {
+  depends_on = [null_resource.onboard_organization]
+  filename = local_file.token_file.filename
+}
+
+# Use the Kubiya resources module
+module "kubiya_resources" {
+  source = "./modules/kubiya_resources"
+  
+  depends_on = [data.local_file.token]
+
+  kubiya_runner = "default"
+  
+  enable_k8s_source     = var.enable_k8s_source
+  enable_github_source  = var.enable_github_source
+  enable_jenkins_source = var.enable_jenkins_source
+  enable_jira_source    = var.enable_jira_source
+  enable_slack_source   = var.enable_slack_source
+
+  providers = {
+    kubiya = kubiya
+  }
+}
+
+# Configure the Kubiya provider with the token
+provider "kubiya" {}
+
+# Output message
+output "result" {
+  description = "Organization onboarding status"
+  sensitive   = true
+  value = {
+    message = "Organization ${var.org_name} onboarding completed"
+    token = data.local_file.token.content
+    source_ids = module.kubiya_resources.source_ids
+  }
+}'''
+
+def variables_tf():
+    """Variables for Terraform configuration"""
+    return '''
+variable "org_name" {
+  description = "The name of the organization to onboard"
+  type        = string
+}
+
+variable "admin_email" {
+  description = "The email of the organization admin"
+  type        = string
+}
+
+variable "invite_users" {
+  description = "List of user emails to invite to the organization"
+  type        = list(string)
+  default     = []
+}
+
+variable "invite_admins" {
+  description = "List of admin emails to invite to the organization"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_k8s_source" {
+  description = "Whether to enable the Kubernetes source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_github_source" {
+  description = "Whether to enable the GitHub source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_jenkins_source" {
+  description = "Whether to enable the Jenkins source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_jira_source" {
+  description = "Whether to enable the Jira source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_slack_source" {
+  description = "Whether to enable the Slack source"
+  type        = bool
+  default     = true
+}'''
+
+def module_main_tf():
+    """Main Terraform configuration for Kubiya resources module"""
+    return '''
+terraform {
+  required_providers {
+    http = {
+      source = "hashicorp/http"
+      version = "~> 3.0"
+    }
+    kubiya = {
+      source = "kubiya-terraform/kubiya"
+    }
+  }
+}
+
+provider "kubiya" {}
+
+# Sources
+resource "kubiya_source" "kubernetes" {
+  count = var.enable_k8s_source ? 1 : 0
+  url = "https://github.com/kubiyabot/community-tools/tree/main/kubernetes"
+  runner = var.kubiya_runner
+}
+
+resource "kubiya_source" "github" {
+  count = var.enable_github_source ? 1 : 0
+  url = "https://github.com/kubiyabot/community-tools/tree/main/github"
+  runner = var.kubiya_runner
+}
+
+resource "kubiya_source" "jenkins" {
+  count = var.enable_jenkins_source ? 1 : 0
+  url = "https://github.com/kubiyabot/community-tools/tree/main/jenkins"
+  runner = var.kubiya_runner
+}
+
+resource "kubiya_source" "jira" {
+  count = var.enable_jira_source ? 1 : 0
+  url = "https://github.com/kubiyabot/community-tools/tree/main/jira"
+  runner = var.kubiya_runner
+}
+
+resource "kubiya_source" "slack" {
+  count = var.enable_slack_source ? 1 : 0
+  url = "https://github.com/kubiyabot/community-tools/tree/main/slack"
+  runner = var.kubiya_runner
+}
+
+# Outputs
+output "source_ids" {
+  description = "IDs of created sources"
+  value = {
+    kubernetes = var.enable_k8s_source ? kubiya_source.kubernetes[0].id : null
+    github = var.enable_github_source ? kubiya_source.github[0].id : null
+    jenkins = var.enable_jenkins_source ? kubiya_source.jenkins[0].id : null
+    jira = var.enable_jira_source ? kubiya_source.jira[0].id : null
+    slack = var.enable_slack_source ? kubiya_source.slack[0].id : null
+  }
+}'''
+
+def module_variables_tf():
+    """Variables for Kubiya resources module"""
+    return '''
+variable "kubiya_runner" {
+  description = "The Kubiya runner to use for the sources"
+  type        = string
+}
+
+variable "enable_k8s_source" {
+  description = "Whether to enable the Kubernetes source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_github_source" {
+  description = "Whether to enable the GitHub source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_jenkins_source" {
+  description = "Whether to enable the Jenkins source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_jira_source" {
+  description = "Whether to enable the Jira source"
+  type        = bool
+  default     = true
+}
+
+variable "enable_slack_source" {
+  description = "Whether to enable the Slack source"
+  type        = bool
+  default     = true
+}'''
+
 def extract_token_from_output(output_json: str) -> str:
     """Extract the Kubiya API token from Terraform output"""
     try:
@@ -100,9 +366,6 @@ fi
 python3 /opt/scripts/terraform_handler.py
 """
 
-        # Get the source code of this module
-        module_source = inspect.getsource(sys.modules[__name__])
-
         super().__init__(
             name=name,
             description=description,
@@ -116,19 +379,19 @@ python3 /opt/scripts/terraform_handler.py
                 # Include all Terraform files with embedded content
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=module_source.split('MAIN_TF = """')[1].split('"""')[0]
+                    content=inspect.getsource(main_tf).split('return """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
-                    content=module_source.split('VARIABLES_TF = """')[1].split('"""')[0]
+                    content=inspect.getsource(variables_tf).split('return """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=module_source.split('MODULE_MAIN_TF = """')[1].split('"""')[0]
+                    content=inspect.getsource(module_main_tf).split('return """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=module_source.split('MODULE_VARIABLES_TF = """')[1].split('"""')[0]
+                    content=inspect.getsource(module_variables_tf).split('return """')[1].split('"""')[0]
                 ),
                 # Include the Python handler script
                 FileSpec(
