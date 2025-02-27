@@ -91,9 +91,17 @@ enable_slack_source = true
 EOL
 fi
 
+# Create directories for modules
+mkdir -p /terraform/modules/kubiya_resources
+
 {content}
 
-# Process the output through our Python handler
+# Process the output through our Python handler and ensure token is exported
+if [ -f /terraform/token.txt ]; then
+    export KUBIYA_API_TOKEN=$(cat /terraform/token.txt)
+    echo "Exported KUBIYA_API_TOKEN from token file"
+fi
+
 python3 /opt/scripts/terraform_handler.py
 """
 
