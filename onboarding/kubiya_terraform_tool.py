@@ -107,15 +107,16 @@ resource "null_resource" "onboard_organization" {
         set_api_key = true
       })}')
 
-      TOKEN=$(echo $RESPONSE | jq -r '.token')
+      TOKEN=$(echo "$RESPONSE" | jq -r '.token')
       if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
         echo "Error: Failed to extract token from response"
+        echo "Response was: $RESPONSE"
         exit 1
       fi
 
-      echo $TOKEN > ${local_file.token_file.filename}
+      echo "$TOKEN" > ${local_file.token_file.filename}
     EOT
-    interpreter = ["/bin/bash", "-c"]
+    interpreter = ["/bin/sh", "-c"]
     environment = {
       KUBIYA_API_KEY = "$$KUBIYA_API_KEY"
     }
@@ -337,7 +338,7 @@ class TerraformTool(Tool):
         setup_script = f"""
 set -eu
 
-# Install Python and curl
+# Install required packages
 apk add --no-cache python3 curl jq
 
 cd {terraform_dir}
@@ -369,9 +370,6 @@ fi
 python3 /opt/scripts/terraform_handler.py
 """
 
-        # Update the main.tf content to fix environment variable access
-        main_tf_content = MAIN_TF.replace("${env.KUBIYA_API_KEY}", "${KUBIYA_API_KEY}")
-        
         # Update module main.tf to remove redundant provider block
         module_main_tf_content = MODULE_MAIN_TF.replace(
             """provider "kubiya" {
@@ -393,7 +391,7 @@ python3 /opt/scripts/terraform_handler.py
                 # Include all Terraform files with their content
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=main_tf_content
+                    content=MAIN_TF
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
