@@ -1,158 +1,203 @@
+import inspect
+import sys
+from pathlib import Path
 import os
 import subprocess
 import json
 from typing import List, Optional
-from kubiya_sdk.tools import Tool
+from kubiya_sdk.tools import Tool, Arg, FileSpec, Volume
 from kubiya_sdk.tools.registry import tool_registry
 
-class TerraformExecutionError(Exception):
-    """Custom exception for Terraform execution errors"""
-    pass
+# Add the project root to Python path
+project_root = str(Path(__file__).resolve().parents[2])
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-def run_terraform_command(command: List[str], cwd: str = None) -> str:
-    """
-    Execute a Terraform command and return its output
-    """
-    try:
-        result = subprocess.run(
-            ["terraform"] + command,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        raise TerraformExecutionError(f"Terraform command failed: {e.stderr}")
+TERRAFORM_ICON_URL = "https://storage.getlatka.com/images/kubiya.ai.png"
 
-def extract_token_from_output(terraform_output: str) -> str:
-    """
-    Extract the Kubiya API token from Terraform output
-    """
+def extract_token_from_output(output_json: str) -> str:
+    """Extract the Kubiya API token from Terraform output"""
     try:
-        # Parse the JSON output
-        output_data = json.loads(terraform_output)
-        return output_data.get("result", {}).get("value", {}).get("token", "")
+        data = json.loads(output_json)
+        return data.get("result", {}).get("value", {}).get("token", "")
     except json.JSONDecodeError:
-        raise ValueError("Failed to parse Terraform output JSON")
+        return ""
 
-def set_kubiya_api_token(token: str):
+# Script that will be embedded in the tool
+def terraform_handler():
     """
-    Set the KUBIYA_API_TOKEN environment variable
+    Handle Terraform execution and token management
     """
-    os.environ["KUBIYA_API_TOKEN"] = token
+    import json
+    import os
+    import sys
 
-# Tool definition
-terraform_onboarding_tool = Tool(
-    name="terraform_onboarding",
-    description="Execute Terraform for Kubiya onboarding and set API token",
-    image="hashicorp/terraform:latest",
-    content="""
-    terraform init && \
-    terraform apply -auto-approve && \
-    terraform output -json
-    """,
-    secrets=["KUBIYA_API_KEY"],
-    args=[
-        {
-            "name": "org_name",
-            "description": "The name of the organization",
-            "type": "str",
-            "required": True,
-        },
-        {
-            "name": "admin_email",
-            "description": "The email of the organization admin",
-            "type": "str",
-            "required": True,
-        },
-        {
-            "name": "invite_users",
-            "description": "List of user emails to invite",
-            "type": "str",
-            "required": False,
-        },
-        {
-            "name": "invite_admins",
-            "description": "List of admin emails to invite",
-            "type": "str",
-            "required": False,
-        },
-        {
-            "name": "terraform_dir",
-            "description": "Directory containing Terraform files",
-            "type": "str",
-            "required": True,
-        }
-    ],
-    handler=lambda args: handle_terraform_execution(
-        args.get("org_name"),
-        args.get("admin_email"),
-        args.get("invite_users", []),
-        args.get("invite_admins", []),
-        args.get("terraform_dir")
-    )
-)
-
-def handle_terraform_execution(
-    org_name: str,
-    admin_email: str,
-    invite_users: Optional[List[str]] = None,
-    invite_admins: Optional[List[str]] = None,
-    terraform_dir: str = "terraform"
-) -> dict:
-    """
-    Handle the execution of Terraform commands and token management
-    """
+    # Get the token from terraform output
     try:
-        # Initialize Terraform
-        run_terraform_command(["init"], cwd=terraform_dir)
-        
-        # Create tfvars file content
-        tfvars_content = f"""
-org_name = "{org_name}"
-admin_email = "{admin_email}"
-invite_users = {json.dumps(invite_users or [])}
-invite_admins = {json.dumps(invite_admins or [])}
+        output = sys.stdin.read()
+        token = extract_token_from_output(output)
+        if token:
+            os.environ["KUBIYA_API_TOKEN"] = token
+            print(json.dumps({
+                "status": "success",
+                "message": "Token extracted and set successfully",
+                "token": token
+            }))
+        else:
+            print(json.dumps({
+                "status": "error",
+                "message": "No token found in output"
+            }))
+    except Exception as e:
+        print(json.dumps({
+            "status": "error",
+            "message": str(e)
+        }))
+
+class TerraformTool(Tool):
+    def __init__(self, name, description, content, args, terraform_dir="/terraform"):
+        # Setup Terraform environment and token handling
+        setup_script = f"""
+set -eu
+cd {terraform_dir}
+
+# Ensure KUBIYA_API_KEY is available
+if [ -z "$KUBIYA_API_KEY" ]; then
+    echo "Error: KUBIYA_API_KEY environment variable is not set"
+    exit 1
+fi
+
+# Write tfvars file if provided
+if [ ! -z "${{org_name:-}}" ] && [ ! -z "${{admin_email:-}}" ]; then
+    cat > terraform.tfvars << EOL
+org_name = "${{org_name}}"
+admin_email = "${{admin_email}}"
+invite_users = ${{invite_users:-[]}}
+invite_admins = ${{invite_admins:-[]}}
 enable_k8s_source = true
 enable_github_source = true
 enable_jenkins_source = true
 enable_jira_source = true
 enable_slack_source = true
+EOL
+fi
+
+{content}
+
+# Process the output through our Python handler
+python /opt/scripts/terraform_handler.py
 """
-        
-        # Write tfvars file
-        with open(f"{terraform_dir}/terraform.tfvars", "w") as f:
-            f.write(tfvars_content)
-        
-        # Apply Terraform configuration
-        run_terraform_command(["apply", "-auto-approve"], cwd=terraform_dir)
-        
-        # Get outputs
-        output = run_terraform_command(["output", "-json"], cwd=terraform_dir)
-        
-        # Extract and set token
-        token = extract_token_from_output(output)
-        if token:
-            set_kubiya_api_token(token)
-            return {
-                "status": "success",
-                "message": "Terraform execution completed successfully and API token has been set",
-                "token_set": True
-            }
-        else:
-            return {
-                "status": "warning",
-                "message": "Terraform execution completed but no token was found in the output",
-                "token_set": False
-            }
-            
-    except (TerraformExecutionError, ValueError) as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "token_set": False
-        }
+
+        super().__init__(
+            name=name,
+            description=description,
+            icon_url=TERRAFORM_ICON_URL,
+            type="docker",
+            image="hashicorp/terraform:latest",
+            content=setup_script,
+            args=args,
+            secrets=["KUBIYA_API_KEY"],
+            with_files=[
+                # Include all Terraform files
+                FileSpec(
+                    source="terraform/main.tf",
+                    destination="/terraform/main.tf"
+                ),
+                FileSpec(
+                    source="terraform/variables.tf",
+                    destination="/terraform/variables.tf"
+                ),
+                FileSpec(
+                    source="terraform/.terraform.lock.hcl",
+                    destination="/terraform/.terraform.lock.hcl"
+                ),
+                FileSpec(
+                    source="terraform/modules/kubiya_resources/main.tf",
+                    destination="/terraform/modules/kubiya_resources/main.tf"
+                ),
+                FileSpec(
+                    source="terraform/modules/kubiya_resources/variables.tf",
+                    destination="/terraform/modules/kubiya_resources/variables.tf"
+                ),
+                # Include the Python handler script
+                FileSpec(
+                    destination="/opt/scripts/terraform_handler.py",
+                    content=inspect.getsource(terraform_handler)
+                )
+            ],
+            with_volumes=[
+                Volume(
+                    name="terraform_cache",
+                    path="/terraform/.terraform"
+                )
+            ],
+            long_running=False,
+            mermaid="""
+sequenceDiagram
+    participant U as User
+    participant T as Terraform Tool
+    participant K as Kubiya API
+
+    U->>T: Execute with org details
+    T->>T: Create tfvars
+    T->>K: Initialize and apply
+    K-->>T: Return token
+    T->>T: Set KUBIYA_API_TOKEN
+    T-->>U: Return status
+"""
+        )
+
+# Create the onboarding tool
+terraform_onboarding_tool = TerraformTool(
+    name="terraform_onboarding",
+    description="""
+Execute Terraform for Kubiya onboarding and set API token.
+This tool will:
+1. Create a new organization
+2. Set up initial configuration
+3. Configure sources and integrations
+4. Set the API token for subsequent operations
+""",
+    content="""
+terraform init && \
+terraform apply -auto-approve && \
+terraform output -json
+""",
+    args=[
+        Arg(
+            name="org_name",
+            description="The name of the organization to create",
+            required=True
+        ),
+        Arg(
+            name="admin_email",
+            description="The email address of the organization administrator",
+            required=True
+        ),
+        Arg(
+            name="invite_users",
+            description="""
+List of user email addresses to invite to the organization.
+Example: ["user1@example.com", "user2@example.com"]
+""",
+            required=False
+        ),
+        Arg(
+            name="invite_admins",
+            description="""
+List of admin email addresses to invite to the organization.
+Example: ["admin1@example.com", "admin2@example.com"]
+""",
+            required=False
+        )
+    ]
+)
 
 # Register the tool
-tool_registry.register("terraform_onboarding", terraform_onboarding_tool) 
+tool_registry.register("terraform_onboarding", terraform_onboarding_tool)
+
+# Export the tool
+__all__ = ["terraform_onboarding_tool"]
+
+# Make sure the tool is available at module level
+globals()["terraform_onboarding_tool"] = terraform_onboarding_tool 
