@@ -56,11 +56,13 @@ def terraform_handler():
             "message": str(e)
         }))
 
+def read_file_content(file_path: str) -> str:
+    """Read content from a file relative to the workspace root"""
+    with open(file_path, 'r') as f:
+        return f.read()
+
 class TerraformTool(Tool):
     def __init__(self, name, description, content, args):
-        # Get Terraform content
-        terraform_files = get_terraform_content()
-        
         # Setup Terraform environment and token handling
         setup_script = f"""
 set -eu
@@ -115,22 +117,22 @@ python3 /opt/scripts/terraform_handler.py
             args=args,
             secrets=["KUBIYA_API_KEY"],
             with_files=[
-                # Include all Terraform files with their content
+                # Include all Terraform files from disk
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=terraform_files["main"]["content"]
+                    content=read_file_content("terraform/main.tf")
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
-                    content=terraform_files["variables"]["content"]
+                    content=read_file_content("terraform/variables.tf")
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=terraform_files["modules"]["kubiya_resources"]["main"]["content"]
+                    content=read_file_content("terraform/modules/kubiya_resources/main.tf")
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=terraform_files["modules"]["kubiya_resources"]["variables"]["content"]
+                    content=read_file_content("terraform/modules/kubiya_resources/variables.tf")
                 ),
                 # Include the Python handler script
                 FileSpec(
