@@ -88,8 +88,6 @@ module "kubiya_resources" {
 
   # Pass variables to the module
   kubiya_runner = "default"
-  agent_name    = "kubiya-agent"
-  kubiya_groups = []
   
   enable_k8s_source     = var.enable_k8s_source
   enable_github_source  = var.enable_github_source

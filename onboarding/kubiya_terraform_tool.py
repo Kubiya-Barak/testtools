@@ -54,11 +54,6 @@ def terraform_handler():
             "message": str(e)
         }))
 
-def read_file_content(file_path: str) -> str:
-    """Read content from a file relative to the workspace root"""
-    with open(file_path, 'r') as f:
-        return f.read()
-
 class TerraformTool(Tool):
     def __init__(self, name, description, content, args):
         # Setup Terraform environment and token handling
@@ -105,6 +100,9 @@ fi
 python3 /opt/scripts/terraform_handler.py
 """
 
+        # Get the source code of this module
+        module_source = inspect.getsource(sys.modules[__name__])
+
         super().__init__(
             name=name,
             description=description,
@@ -115,22 +113,22 @@ python3 /opt/scripts/terraform_handler.py
             args=args,
             secrets=["KUBIYA_API_KEY"],
             with_files=[
-                # Include all Terraform files from disk
+                # Include all Terraform files with embedded content
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=read_file_content("terraform/main.tf")
+                    content=module_source.split('MAIN_TF = """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
-                    content=read_file_content("terraform/variables.tf")
+                    content=module_source.split('VARIABLES_TF = """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=read_file_content("terraform/modules/kubiya_resources/main.tf")
+                    content=module_source.split('MODULE_MAIN_TF = """')[1].split('"""')[0]
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=read_file_content("terraform/modules/kubiya_resources/variables.tf")
+                    content=module_source.split('MODULE_VARIABLES_TF = """')[1].split('"""')[0]
                 ),
                 # Include the Python handler script
                 FileSpec(
