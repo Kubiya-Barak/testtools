@@ -8,6 +8,9 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.4"
     }
+    kubiya = {
+      source = "kubiya-terraform/kubiya"
+    }
   }
 }
 
@@ -77,114 +80,32 @@ data "local_file" "token" {
   filename = local_file.token_file.filename
 }
 
-# Add Kubernetes source if enabled
-resource "null_resource" "add_k8s_source" {
-  count = var.enable_k8s_source ? 1 : 0
+# Use the Kubiya resources module
+module "kubiya_resources" {
+  source = "./modules/kubiya_resources"
+  
   depends_on = [data.local_file.token]
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      # Debug: Print token content
-      echo "Using token from file:"
-      cat ${local_file.token_file.filename}
-      
-      # Make the request
-      curl -s -X POST '${local.base_url}/sources' \
-      -H "Authorization: UserKey $(cat ${local_file.token_file.filename})" \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "name": "Kubernetes",
-        "url": "https://github.com/kubiyabot/community-tools/tree/main/kubernetes",
-        "dynamic_config": {}
-      }' \
-      -i | grep -E 'HTTP/|{'
-    EOT
-    interpreter = ["/bin/bash", "-c"]
+  # Pass variables to the module
+  kubiya_runner = "default"
+  agent_name    = "kubiya-agent"
+  kubiya_groups = []
+  
+  enable_k8s_source     = var.enable_k8s_source
+  enable_github_source  = var.enable_github_source
+  enable_jenkins_source = var.enable_jenkins_source
+  enable_jira_source    = var.enable_jira_source
+  enable_slack_source   = var.enable_slack_source
+
+  providers = {
+    kubiya = kubiya
   }
 }
 
-# Add GitHub source if enabled
-resource "null_resource" "add_github_source" {
-  count = var.enable_github_source ? 1 : 0
-  depends_on = [data.local_file.token]
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      curl -s -X POST '${local.base_url}/sources' \
-      -H "Authorization: UserKey $(cat ${local_file.token_file.filename})" \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "name": "GitHub",
-        "url": "https://github.com/kubiyabot/community-tools/tree/main/github",
-        "dynamic_config": {}
-      }' \
-      -i | grep -E 'HTTP/|{'
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
-# Add Jenkins source if enabled
-resource "null_resource" "add_jenkins_source" {
-  count = var.enable_jenkins_source ? 1 : 0
-  depends_on = [data.local_file.token]
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      curl -s -X POST '${local.base_url}/sources' \
-      -H "Authorization: UserKey $(cat ${local_file.token_file.filename})" \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "name": "Jenkins",
-        "url": "https://github.com/kubiyabot/community-tools/tree/main/jenkins",
-        "dynamic_config": {}
-      }' \
-      -i | grep -E 'HTTP/|{'
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
-# Add Jira source if enabled
-resource "null_resource" "add_jira_source" {
-  count = var.enable_jira_source ? 1 : 0
-  depends_on = [data.local_file.token]
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      curl -s -X POST '${local.base_url}/sources' \
-      -H "Authorization: UserKey $(cat ${local_file.token_file.filename})" \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "name": "Jira",
-        "url": "https://github.com/kubiyabot/community-tools/tree/main/jira",
-        "dynamic_config": {}
-      }' \
-      -i | grep -E 'HTTP/|{'
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
-# Add Slack source if enabled
-resource "null_resource" "add_slack_source" {
-  count = var.enable_slack_source ? 1 : 0
-  depends_on = [data.local_file.token]
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      curl -s -X POST '${local.base_url}/sources' \
-      -H "Authorization: UserKey $(cat ${local_file.token_file.filename})" \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "name": "Slack",
-        "url": "https://github.com/kubiyabot/community-tools/tree/main/slack",
-        "dynamic_config": {}
-      }' \
-      -i | grep -E 'HTTP/|{'
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
+# Configure the Kubiya provider with the token
+provider "kubiya" {
+  # The token will be automatically used from KUBIYA_API_TOKEN environment variable
+  # which is set by the Python tool after the onboarding process
 }
 
 # Output message
@@ -194,12 +115,6 @@ output "result" {
   value = {
     message = "Organization ${var.org_name} onboarding completed. Check the output above for status code and response."
     token = data.local_file.token.content
-    enabled_sources = {
-      kubernetes = var.enable_k8s_source
-      github = var.enable_github_source
-      jenkins = var.enable_jenkins_source
-      jira = var.enable_jira_source
-      slack = var.enable_slack_source
-    }
+    source_ids = module.kubiya_resources.source_ids
   }
 }
