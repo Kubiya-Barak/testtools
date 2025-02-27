@@ -54,23 +54,22 @@ resource "null_resource" "onboard_organization" {
 
       # Print response for debugging
       echo "Full Response:"
-      echo $RESPONSE | jq '.'
+      echo "$RESPONSE" | jq '.'
 
       # Extract and verify token
-      TOKEN=$(echo $RESPONSE | jq -r '.token')
+      TOKEN=$(echo "$RESPONSE" | jq -r '.token')
       if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
         echo "Error: Failed to extract token from response"
+        echo "Response was: $RESPONSE"
         exit 1
       fi
 
-      echo "Token extracted successfully"
-      echo $TOKEN > ${local_file.token_file.filename}
-
-      # Print status and response
-      echo "HTTP/1.1 200 OK"
-      echo $RESPONSE | jq '.'
+      # Save token to file and export it for Kubiya provider
+      echo "$TOKEN" > ${local_file.token_file.filename}
+      export KUBIYA_API_TOKEN="$TOKEN"
+      echo "Successfully obtained and exported new API token"
     EOT
-    interpreter = ["/bin/bash", "-c"]
+    interpreter = ["/bin/sh", "-c"]
   }
 }
 
@@ -86,7 +85,6 @@ module "kubiya_resources" {
   
   depends_on = [data.local_file.token]
 
-  # Pass variables to the module
   kubiya_runner = "default"
   
   enable_k8s_source     = var.enable_k8s_source
