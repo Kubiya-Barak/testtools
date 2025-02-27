@@ -83,8 +83,8 @@ if [ ! -z "${{org_name:-}}" ] && [ ! -z "${{admin_email:-}}" ]; then
     cat > terraform.tfvars << EOL
 org_name = "${{org_name}}"
 admin_email = "${{admin_email}}"
-invite_users = ${{invite_users:-[]}}
-invite_admins = ${{invite_admins:-[]}}
+invite_users = [${{invite_users:-}}]
+invite_admins = [${{invite_admins:-}}]
 enable_k8s_source = true
 enable_github_source = true
 enable_jenkins_source = true
@@ -193,7 +193,9 @@ terraform output -json
             name="invite_users",
             description="""
 List of user email addresses to invite to the organization.
-Example: ["user1@example.com", "user2@example.com"]
+Format: Provide email addresses as a quoted, comma-separated list, e.g.:
+"user1@example.com","user2@example.com"
+Note: Each email must be quoted and separated by commas, no spaces
 """,
             required=False
         ),
@@ -201,7 +203,9 @@ Example: ["user1@example.com", "user2@example.com"]
             name="invite_admins",
             description="""
 List of admin email addresses to invite to the organization.
-Example: ["admin1@example.com", "admin2@example.com"]
+Format: Provide email addresses as a quoted, comma-separated list, e.g.:
+"admin1@example.com","admin2@example.com"
+Note: Each email must be quoted and separated by commas, no spaces
 """,
             required=False
         )
