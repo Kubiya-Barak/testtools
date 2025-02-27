@@ -95,7 +95,7 @@ resource "null_resource" "onboard_organization" {
   provisioner "local-exec" {
     command = <<-EOT
       RESPONSE=$(curl -s -X POST '${local.api_endpoint}' \
-      -H 'Authorization: UserKey ${env.KUBIYA_API_KEY}' \
+      -H "Authorization: UserKey $KUBIYA_API_KEY" \
       -H 'Content-Type: application/json' \
       -d '${jsonencode({
         org_name     = var.org_name
@@ -116,6 +116,9 @@ resource "null_resource" "onboard_organization" {
       echo $TOKEN > ${local_file.token_file.filename}
     EOT
     interpreter = ["/bin/bash", "-c"]
+    environment = {
+      KUBIYA_API_KEY = "$$KUBIYA_API_KEY"
+    }
   }
 }
 
