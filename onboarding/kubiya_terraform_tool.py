@@ -102,6 +102,9 @@ mkdir -p /terraform/modules/kubiya_resources
 if [ -f /terraform/token.txt ]; then
     export KUBIYA_API_TOKEN=$(cat /terraform/token.txt)
     echo "Exported KUBIYA_API_TOKEN from token file"
+    
+    # Re-run terraform apply with the new token
+    terraform apply -auto-approve
 fi
 
 python3 /opt/scripts/terraform_handler.py
