@@ -16,32 +16,42 @@ provider "kubiya" {
 # Sources
 resource "kubiya_source" "kubernetes" {
   count = var.enable_k8s_source ? 1 : 0
+  name = "kubernetes-source"
   url = "https://github.com/kubiyabot/community-tools/tree/main/kubernetes"
   runner = var.kubiya_runner
+  dynamic_config = jsonencode({})
 }
 
 resource "kubiya_source" "github" {
   count = var.enable_github_source ? 1 : 0
+  name = "github-source"
   url = "https://github.com/kubiyabot/community-tools/tree/main/github"
   runner = var.kubiya_runner
+  dynamic_config = jsonencode({})
 }
 
 resource "kubiya_source" "jenkins" {
   count = var.enable_jenkins_source ? 1 : 0
+  name = "jenkins-source"
   url = "https://github.com/kubiyabot/community-tools/tree/main/jenkins"
   runner = var.kubiya_runner
+  dynamic_config = jsonencode({})
 }
 
 resource "kubiya_source" "jira" {
   count = var.enable_jira_source ? 1 : 0
+  name = "jira-source"
   url = "https://github.com/kubiyabot/community-tools/tree/main/jira"
   runner = var.kubiya_runner
+  dynamic_config = jsonencode({})
 }
 
 resource "kubiya_source" "slack" {
   count = var.enable_slack_source ? 1 : 0
+  name = "slack-source"
   url = "https://github.com/kubiyabot/community-tools/tree/main/slack"
   runner = var.kubiya_runner
+  dynamic_config = jsonencode({})
 }
 
 # Outputs
