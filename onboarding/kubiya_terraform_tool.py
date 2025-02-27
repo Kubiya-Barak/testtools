@@ -230,10 +230,6 @@ terraform {
   }
 }
 
-provider "kubiya" {
-  # API key will be set via KUBIYA_API_TOKEN environment variable
-}
-
 # Sources
 resource "kubiya_source" "kubernetes" {
   count = var.enable_k8s_source ? 1 : 0
@@ -337,6 +333,10 @@ class TerraformTool(Tool):
         # Setup Terraform environment and token handling
         setup_script = f"""
 set -eu
+
+# Install Python and curl
+apk add --no-cache python3 curl jq
+
 cd {terraform_dir}
 
 # Ensure KUBIYA_API_KEY is available
@@ -363,8 +363,19 @@ fi
 {content}
 
 # Process the output through our Python handler
-python /opt/scripts/terraform_handler.py
+python3 /opt/scripts/terraform_handler.py
 """
+
+        # Update the main.tf content to fix environment variable access
+        main_tf_content = MAIN_TF.replace("${env.KUBIYA_API_KEY}", "${KUBIYA_API_KEY}")
+        
+        # Update module main.tf to remove redundant provider block
+        module_main_tf_content = MODULE_MAIN_TF.replace(
+            """provider "kubiya" {
+  # API key will be set via KUBIYA_API_TOKEN environment variable
+}""",
+            ""
+        )
 
         super().__init__(
             name=name,
@@ -379,7 +390,7 @@ python /opt/scripts/terraform_handler.py
                 # Include all Terraform files with their content
                 FileSpec(
                     destination="/terraform/main.tf",
-                    content=MAIN_TF
+                    content=main_tf_content
                 ),
                 FileSpec(
                     destination="/terraform/variables.tf",
@@ -387,7 +398,7 @@ python /opt/scripts/terraform_handler.py
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=MODULE_MAIN_TF
+                    content=module_main_tf_content
                 ),
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
