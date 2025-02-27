@@ -70,12 +70,18 @@ terraform_onboarding_tool = Tool(
             "name": "invite_users",
             "description": "List of user emails to invite",
             "type": "array",
+            "items": {
+                "type": "str"
+            },
             "required": False,
         },
         {
             "name": "invite_admins",
             "description": "List of admin emails to invite",
             "type": "array",
+            "items": {
+                "type": "str"
+            },
             "required": False,
         },
         {
