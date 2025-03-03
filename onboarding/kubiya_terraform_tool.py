@@ -94,23 +94,20 @@ EOL
 fi
 
 # Step 1: Run onboarding to get token
-cd /terraform
 terraform init
-terraform apply -target=null_resource.onboard_organization -target=local_file.token_file -auto-approve
+terraform apply -auto-approve
 
 # Step 2: If we got a token, run the resources configuration
 if [ -f /terraform/token.txt ]; then
-    # Export token and ensure it's available to subsequent commands
-    TOKEN=$(cat /terraform/token.txt)
-    export KUBIYA_API_TOKEN="$TOKEN"
-    echo "KUBIYA_API_TOKEN=$TOKEN" >> /etc/environment
-    source /etc/environment
+    export KUBIYA_API_TOKEN=$(cat /terraform/token.txt)
     echo "Exported KUBIYA_API_TOKEN from token file"
     
-    # Run the second configuration with the new token
-    cd /terraform/modules/kubiya_resources
+    # Create a separate terraform configuration for resources
+    mv /terraform/modules/kubiya_resources/main.tf /terraform/resources.tf
+    
+    # Initialize and apply the resources with new token
     terraform init
-    terraform apply -auto-approve
+    terraform apply -auto-approve -target=kubiya_runner.runner-dev-cluster -target=kubiya_agent.kubernetes_crew
 fi
 
 python3 /opt/scripts/terraform_handler.py
@@ -126,7 +123,7 @@ python3 /opt/scripts/terraform_handler.py
             args=args,
             secrets=["KUBIYA_API_KEY"],
             with_files=[
-                # First configuration for onboarding
+                # Include all Terraform files from disk
                 FileSpec(
                     destination="/terraform/main.tf",
                     content=read_terraform_file("terraform/main.tf")
@@ -135,7 +132,6 @@ python3 /opt/scripts/terraform_handler.py
                     destination="/terraform/variables.tf",
                     content=read_terraform_file("terraform/variables.tf")
                 ),
-                # Second configuration for resources
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
                     content=read_terraform_file("terraform/modules/kubiya_resources/main.tf")
@@ -143,6 +139,11 @@ python3 /opt/scripts/terraform_handler.py
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/variables.tf",
                     content=read_terraform_file("terraform/modules/kubiya_resources/variables.tf")
+                ),
+                # Include the Python handler script
+                FileSpec(
+                    destination="/opt/scripts/terraform_handler.py",
+                    content=inspect.getsource(terraform_handler)
                 )
             ],
             with_volumes=[
@@ -150,7 +151,21 @@ python3 /opt/scripts/terraform_handler.py
                     name="terraform_cache",
                     path="/terraform/.terraform"
                 )
-            ]
+            ],
+            long_running=False,
+            mermaid="""
+sequenceDiagram
+    participant U as User
+    participant T as Terraform Tool
+    participant K as Kubiya API
+
+    U->>T: Execute with org details
+    T->>T: Create tfvars
+    T->>K: Initialize and apply
+    K-->>T: Return token
+    T->>T: Set KUBIYA_API_TOKEN
+    T-->>U: Return status
+"""
         )
 
 # Create the onboarding tool
