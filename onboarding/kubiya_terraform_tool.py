@@ -101,7 +101,7 @@ if [ -f /terraform/token.txt ]; then
     export KUBIYA_API_KEY="$TOKEN"    # Set the API key to the new token
     echo "Verifying new token:"
     echo "KUBIYA_API_KEY=$KUBIYA_API_KEY"
-    echo "KUBIYA_API_TOKEN=$TOKEN
+    echo "KUBIYA_API_TOKEN=$TOKEN"
     
     # Run the second configuration with the new token
     cd /terraform/modules/kubiya_resources
