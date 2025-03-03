@@ -20,32 +20,8 @@ variable "invite_admins" {
   default     = []
 }
 
-variable "enable_k8s_source" {
-  description = "Whether to enable the Kubernetes source"
-  type        = bool
-  default     = false
-}
-
-variable "enable_github_source" {
-  description = "Whether to enable the GitHub source"
-  type        = bool
-  default     = false
-}
-
-variable "enable_jenkins_source" {
-  description = "Whether to enable the Jenkins source"
-  type        = bool
-  default     = false
-}
-
-variable "enable_jira_source" {
-  description = "Whether to enable the Jira source"
-  type        = bool
-  default     = false
-}
-
-variable "enable_slack_source" {
-  description = "Whether to enable the Slack source"
+variable "managed_runner" {
+  description = "Whether to create a managed runner for the organization"
   type        = bool
   default     = false
 }

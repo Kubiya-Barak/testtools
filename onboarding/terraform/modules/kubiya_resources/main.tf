@@ -6,12 +6,13 @@ terraform {
     }
     kubiya = {
       source = "kubiya-terraform/kubiya"
+      version = "0.8.2"
     }
   }
 }
 
 provider "kubiya" {
-  # API key will be set via KUBIYA_API_TOKEN environment variable
+    // API key is set as an environment variable KUBIYA_API_KEY
 }
 
 resource "kubiya_runner" "runner-dev-cluster" {

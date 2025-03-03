@@ -18,9 +18,3 @@ invite_admins = [
   
 ]
 
-# Optional: Enable sources
-enable_k8s_source = true
-enable_github_source = true
-enable_jenkins_source = true
-enable_jira_source = true
-enable_slack_source = true

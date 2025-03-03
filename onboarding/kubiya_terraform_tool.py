@@ -22,140 +22,8 @@ def read_terraform_file(path: str) -> str:
     with open(file_path, 'r') as f:
         return f.read()
 
-def extract_token_from_output(output_json: str) -> str:
-    """Extract the Kubiya API token from Terraform output"""
-    try:
-        data = json.loads(output_json)
-        return data.get("result", {}).get("value", {}).get("token", "")
-    except json.JSONDecodeError:
-        return ""
-
-# Script that will be embedded in the tool
-def terraform_handler():
-    """
-    Handle Terraform execution and token management
-    """
-    import json
-    import os
-    import sys
-
-    # Get the token from terraform output
-    try:
-        output = sys.stdin.read()
-        token = extract_token_from_output(output)
-        if token:
-            os.environ["KUBIYA_API_TOKEN"] = token
-            print(json.dumps({
-                "status": "success",
-                "message": "Token extracted and set successfully",
-                "token": token
-            }))
-        else:
-            print(json.dumps({
-                "status": "error",
-                "message": "No token found in output"
-            }))
-    except Exception as e:
-        print(json.dumps({
-            "status": "error",
-            "message": str(e)
-        }))
-
-class TerraformTool(Tool):
-    def __init__(self, name, description, content, args):
-        # Setup Terraform environment and token handling
-        setup_script = f"""
-set -eu
-
-# Install required packages
-apk add --no-cache python3 curl jq
-
-cd /terraform
-
-# Ensure KUBIYA_API_KEY is available
-if [ -z "$KUBIYA_API_KEY" ]; then
-    echo "Error: KUBIYA_API_KEY environment variable is not set"
-    exit 1
-fi
-
-# Write tfvars file if provided
-if [ ! -z "${{org_name:-}}" ] && [ ! -z "${{admin_email:-}}" ]; then
-    cat > terraform.tfvars << EOL
-org_name = "${{org_name}}"
-admin_email = "${{admin_email}}"
-invite_users = [${{invite_users:-}}]
-invite_admins = [${{invite_admins:-}}]
-managed_runner = ${{managed_runner:-false}}
-EOL
-fi
-
-# Step 1: Run onboarding to get token
-cd /terraform
-terraform init
-terraform apply -target=null_resource.onboard_organization -target=local_file.token_file -auto-approve
-
-# Step 2: If we got a token, run the resources configuration
-if [ -f /terraform/token.txt ]; then
-    # Export token and ensure it's available to subsequent commands
-    TOKEN=$(cat /terraform/token.txt)
-    export KUBIYA_API_KEY="$TOKEN"    # Set the API key to the new token
-    echo "Verifying new token:"
-    echo "KUBIYA_API_KEY=$KUBIYA_API_KEY"
-    echo "KUBIYA_API_TOKEN=$TOKEN"
-    
-    # Run the second configuration with the new token
-    cd /terraform/modules/kubiya_resources
-    terraform init
-    terraform apply -auto-approve
-fi
-
-python3 /opt/scripts/terraform_handler.py
-"""
-
-        super().__init__(
-            name=name,
-            description=description,
-            icon_url=TERRAFORM_ICON_URL,
-            type="docker",
-            image="hashicorp/terraform:latest",
-            content=setup_script,
-            args=args,
-            secrets=["KUBIYA_API_KEY"],
-            with_files=[
-                # First configuration for onboarding
-                FileSpec(
-                    destination="/terraform/main.tf",
-                    content=read_terraform_file("terraform/main.tf")
-                ),
-                FileSpec(
-                    destination="/terraform/variables.tf",
-                    content=read_terraform_file("terraform/variables.tf")
-                ),
-                # Second configuration for resources
-                FileSpec(
-                    destination="/terraform/modules/kubiya_resources/main.tf",
-                    content=read_terraform_file("terraform/modules/kubiya_resources/main.tf")
-                ),
-                FileSpec(
-                    destination="/terraform/modules/kubiya_resources/variables.tf",
-                    content=read_terraform_file("terraform/modules/kubiya_resources/variables.tf")
-                ),
-                # Python handler script
-                FileSpec(
-                    destination="/opt/scripts/terraform_handler.py",
-                    content=inspect.getsource(terraform_handler)
-                )
-            ],
-            with_volumes=[
-                Volume(
-                    name="terraform_cache",
-                    path="/terraform/.terraform"
-                )
-            ]
-        )
-
 # Create the onboarding tool
-terraform_onboarding_tool = TerraformTool(
+terraform_onboarding_tool = Tool(
     name="terraform_onboarding",
     description="""
 Execute Terraform for Kubiya onboarding and set API token.
@@ -165,7 +33,31 @@ This tool will:
 3. Configure sources and integrations
 4. Set the API token for subsequent operations
 """,
+    icon_url=TERRAFORM_ICON_URL,
+    type="docker",
+    image="hashicorp/terraform:latest",
     content="""
+set -eu
+
+# Install required packages
+apk add --no-cache python3 curl jq
+
+# Write tfvars file if provided
+if [ ! -z "${org_name:-}" ] && [ ! -z "${admin_email:-}" ]; then
+    cat > /terraform/terraform.tfvars << EOL
+org_name = "${org_name}"
+admin_email = "${admin_email}"
+invite_users = [${invite_users:-}]
+invite_admins = [${invite_admins:-}]
+managed_runner = ${managed_runner:-false}
+EOL
+fi
+
+# Run the terraform commands
+cd /terraform && \
+terraform init && \
+terraform apply -target=null_resource.onboard_organization -auto-approve && \
+cd modules/kubiya_resources && \
 terraform init && \
 terraform apply -auto-approve && \
 terraform output -json
@@ -206,6 +98,31 @@ Note: Each email must be quoted and separated by commas, no spaces
             description="Whether to use managed runners for this organization",
             required=False,
             default="false"
+        )
+    ],
+    secrets=["KUBIYA_API_KEY"],
+    with_files=[
+        FileSpec(
+            destination="/terraform/main.tf",
+            content=read_terraform_file("terraform/main.tf")
+        ),
+        FileSpec(
+            destination="/terraform/variables.tf",
+            content=read_terraform_file("terraform/variables.tf")
+        ),
+        FileSpec(
+            destination="/terraform/modules/kubiya_resources/main.tf",
+            content=read_terraform_file("terraform/modules/kubiya_resources/main.tf")
+        ),
+        FileSpec(
+            destination="/terraform/modules/kubiya_resources/variables.tf",
+            content=read_terraform_file("terraform/modules/kubiya_resources/variables.tf")
+        )
+    ],
+    with_volumes=[
+        Volume(
+            name="terraform_cache",
+            path="/terraform/.terraform"
         )
     ]
 )
