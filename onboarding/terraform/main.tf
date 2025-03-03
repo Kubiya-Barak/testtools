@@ -62,6 +62,5 @@ output "result" {
   sensitive   = true
   value = {
     message = "Organization ${var.org_name} onboarding completed. Check the output above for status code and response."
-    source_ids = module.kubiya_resources.source_ids
   }
 }
