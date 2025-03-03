@@ -85,29 +85,28 @@ org_name = "${{org_name}}"
 admin_email = "${{admin_email}}"
 invite_users = [${{invite_users:-}}]
 invite_admins = [${{invite_admins:-}}]
-enable_k8s_source = true
-enable_github_source = true
-enable_jenkins_source = true
-enable_jira_source = true
-enable_slack_source = true
+managed_runner = ${{managed_runner:-false}}
 EOL
 fi
 
 # Step 1: Run onboarding to get token
+cd /terraform
 terraform init
-terraform apply -auto-approve
+terraform apply -target=null_resource.onboard_organization -target=local_file.token_file -auto-approve
 
 # Step 2: If we got a token, run the resources configuration
 if [ -f /terraform/token.txt ]; then
-    export KUBIYA_API_TOKEN=$(cat /terraform/token.txt)
-    echo "Exported KUBIYA_API_TOKEN from token file"
+    # Export token and ensure it's available to subsequent commands
+    TOKEN=$(cat /terraform/token.txt)
+    export KUBIYA_API_KEY="$TOKEN"    # Set the API key to the new token
+    echo "Verifying new token:"
+    echo "KUBIYA_API_KEY=$KUBIYA_API_KEY"
+    echo "KUBIYA_API_TOKEN=$TOKEN
     
-    # Create a separate terraform configuration for resources
-    mv /terraform/modules/kubiya_resources/main.tf /terraform/resources.tf
-    
-    # Initialize and apply the resources with new token
+    # Run the second configuration with the new token
+    cd /terraform/modules/kubiya_resources
     terraform init
-    terraform apply -auto-approve -target=kubiya_runner.runner-dev-cluster -target=kubiya_agent.kubernetes_crew
+    terraform apply -auto-approve
 fi
 
 python3 /opt/scripts/terraform_handler.py
@@ -123,7 +122,7 @@ python3 /opt/scripts/terraform_handler.py
             args=args,
             secrets=["KUBIYA_API_KEY"],
             with_files=[
-                # Include all Terraform files from disk
+                # First configuration for onboarding
                 FileSpec(
                     destination="/terraform/main.tf",
                     content=read_terraform_file("terraform/main.tf")
@@ -132,6 +131,7 @@ python3 /opt/scripts/terraform_handler.py
                     destination="/terraform/variables.tf",
                     content=read_terraform_file("terraform/variables.tf")
                 ),
+                # Second configuration for resources
                 FileSpec(
                     destination="/terraform/modules/kubiya_resources/main.tf",
                     content=read_terraform_file("terraform/modules/kubiya_resources/main.tf")
@@ -140,7 +140,7 @@ python3 /opt/scripts/terraform_handler.py
                     destination="/terraform/modules/kubiya_resources/variables.tf",
                     content=read_terraform_file("terraform/modules/kubiya_resources/variables.tf")
                 ),
-                # Include the Python handler script
+                # Python handler script
                 FileSpec(
                     destination="/opt/scripts/terraform_handler.py",
                     content=inspect.getsource(terraform_handler)
@@ -151,21 +151,7 @@ python3 /opt/scripts/terraform_handler.py
                     name="terraform_cache",
                     path="/terraform/.terraform"
                 )
-            ],
-            long_running=False,
-            mermaid="""
-sequenceDiagram
-    participant U as User
-    participant T as Terraform Tool
-    participant K as Kubiya API
-
-    U->>T: Execute with org details
-    T->>T: Create tfvars
-    T->>K: Initialize and apply
-    K-->>T: Return token
-    T->>T: Set KUBIYA_API_TOKEN
-    T-->>U: Return status
-"""
+            ]
         )
 
 # Create the onboarding tool
@@ -214,6 +200,12 @@ Format: Provide email addresses as a quoted, comma-separated list, e.g.:
 Note: Each email must be quoted and separated by commas, no spaces
 """,
             required=False
+        ),
+        Arg(
+            name="managed_runner",
+            description="Whether to use managed runners for this organization",
+            required=False,
+            default="false"
         )
     ]
 )
