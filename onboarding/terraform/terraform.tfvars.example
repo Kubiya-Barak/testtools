@@ -3,27 +3,21 @@
 # The API key should be set via environment variable:
 # export TF_VAR_kubiya_api_key="your-api-key"
 
-# Organization name to onboard
-org_name = "example-org"
+# Organization details
+org_name = "your-org-name"
+admin_email = "admin@your-organization.com"
 
-# Admin email for the organization
-admin_email = "admin@example.com"
-
-# Optional: List of regular users to invite
+# Optional: Invite additional users
 invite_users = [
   "user1@example.com",
   "user2@example.com"
 ]
 
-# Optional: List of admin users to invite
+# Optional: Invite additional admins
 invite_admins = [
   "admin1@example.com",
   "admin2@example.com"
 ]
 
-# Optional: Enable sources
-enable_k8s_source = true
-enable_github_source = true
-enable_jenkins_source = true
-enable_jira_source = true
-enable_slack_source = true
+# Runner configuration
+managed_runner = false  # Set to true to use managed runners

@@ -1,20 +1,14 @@
-
 # The API key should be set via environment variable:
 # export TF_VAR_kubiya_api_key="your-api-key"
 
-# Organization name to onboard
-org_name = "barak-test"
+# Organization details
+org_name = "my-org"
+admin_email = "admin@example.com"
 
-# Admin email for the organization
-admin_email = "barak.nagar@kubiya.ai"
+# Optional: Users and admins to invite
+invite_users = []
+invite_admins = []
 
-# Optional: List of regular users to invite
-invite_users = [
-  
-]
-
-# Optional: List of admin users to invite
-invite_admins = [
-  
-]
+# Runner configuration
+managed_runner = false
 

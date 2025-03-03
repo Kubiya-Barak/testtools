@@ -1,6 +1,14 @@
-# Kubiya Organization Onboarding Terraform Module
+# Kubiya Terraform Onboarding Tool
 
-This Terraform module automates the process of onboarding a new organization to Kubiya and configuring various integration sources.
+This tool automates the process of onboarding new organizations to Kubiya using Terraform.
+
+## Overview
+
+The tool performs two main operations:
+1. Creates a new organization and gets an API token
+2. Sets up resources (runner and agent) using the new token
+
+## Files Structure
 
 ## Features
 
@@ -46,12 +54,8 @@ This Terraform module automates the process of onboarding a new organization to 
      "admin2@example.com"
    ]
 
-   # Enable desired sources
-   enable_k8s_source = true
-   enable_github_source = true
-   enable_jenkins_source = true
-   enable_jira_source = true
-   enable_slack_source = true
+   # Runner configuration
+   managed_runner = false  # Set to true to use managed runners
    ```
 
 5. Initialize and apply the Terraform configuration:
@@ -69,11 +73,7 @@ This Terraform module automates the process of onboarding a new organization to 
 | admin_email | Email of the organization admin | string | - | yes |
 | invite_users | List of user emails to invite | list(string) | [] | no |
 | invite_admins | List of admin emails to invite | list(string) | [] | no |
-| enable_k8s_source | Enable Kubernetes source | bool | false | no |
-| enable_github_source | Enable GitHub source | bool | false | no |
-| enable_jenkins_source | Enable Jenkins source | bool | false | no |
-| enable_jira_source | Enable Jira source | bool | false | no |
-| enable_slack_source | Enable Slack source | bool | false | no |
+| managed_runner | Enable managed runner | bool | false | no |
 
 ## Outputs
 
