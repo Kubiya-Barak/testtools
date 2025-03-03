@@ -53,14 +53,22 @@ managed_runner = ${managed_runner:-false}
 EOL
 fi
 
-# Run the terraform commands
-cd /terraform && \
-terraform init && \
-terraform apply -target=null_resource.onboard_organization -auto-approve && \
-cd modules/kubiya_resources && \
-terraform init && \
-terraform apply -auto-approve && \
-terraform output -json
+# Step 1: Run onboarding to get token
+cd /terraform
+terraform init
+terraform apply -target=null_resource.onboard_organization -target=local_file.token_file -auto-approve
+
+# Step 2: If we got a token, run the resources configuration
+if [ -f /terraform/token.txt ]; then
+    # Export token and ensure it's available to subsequent commands
+    TOKEN=$(cat /terraform/token.txt)
+    export KUBIYA_API_KEY="$TOKEN"    # Set the API key to the new token
+    
+    # Run the second configuration with the new token
+    cd /terraform/modules/kubiya_resources
+    terraform init
+    terraform apply -auto-approve
+fi
 """,
     args=[
         Arg(

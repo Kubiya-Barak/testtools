@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/http"
       version = "~> 3.0"
     }
+     local = {
+      source  = "hashicorp/local"
+      version = "~> 2.4"
+    }
   }
 }
 
@@ -11,6 +15,15 @@ terraform {
 locals {
   base_url = "https://api.kubiya.ai/api"
   api_endpoint = "${local.base_url}/v1/onboard"
+}
+
+# Create a file to track if token was created
+resource "local_file" "token_file" {
+  content  = "placeholder"
+  filename = "${path.module}/token.txt"
+  lifecycle {
+    ignore_changes = [content]
+  }
 }
 
 # HTTP POST request for organization onboarding
@@ -49,11 +62,18 @@ resource "null_resource" "onboard_organization" {
       fi
 
       # Export the new token for Kubiya provider
-      export KUBIYA_API_KEY="$TOKEN"
+      # Save token to file and export it for Kubiya provider
+      echo "$TOKEN" > ${local_file.token_file.filename}
       echo "Successfully obtained and exported new API token"
     EOT
     interpreter = ["/bin/sh", "-c"]
   }
+}
+
+# Read the token from the file
+data "local_file" "token" {
+  depends_on = [null_resource.onboard_organization]
+  filename = local_file.token_file.filename
 }
 
 # Output message

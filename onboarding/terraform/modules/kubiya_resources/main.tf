@@ -6,7 +6,6 @@ terraform {
     }
     kubiya = {
       source = "kubiya-terraform/kubiya"
-      version = "0.8.2"
     }
   }
 }
